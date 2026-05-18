@@ -1,7 +1,7 @@
 // e11_serialtelem - Serial telemetry + drive control
 //
-// Serial out (20 Hz CSV): US_cm, IR, EL, ER
-// Serial in  (CSV):       x, w     (-1.0 to 1.0)
+// Serial out (20 Hz CSV): EL, ER, IR, US_cm
+// Serial in  (CSV):       a, b [, direct]  — direct=0 (default): mixed (x,w)  direct=1: direct (left,right)
 //
 // The header line printed once in setup() enables labels in the
 // Arduino IDE 2.x Serial Plotter. Numerical parsers can skip it.
@@ -67,9 +67,18 @@ char cmdBuf[32];
 int  cmdLen = 0;
 
 void parseCommand(const char* buf) {
-  float x, w;
-  if (sscanf(buf, "%f,%f", &x, &w) == 2) {
-    drive(constrain(x, -1.0f, 1.0f), constrain(w, -1.0f, 1.0f));
+  float a, b;
+  int direct = 0;  // default: mixed mode
+  if (sscanf(buf, "%f,%f,%d", &a, &b, &direct) < 2) return;
+  a = constrain(a, -1.0f, 1.0f);
+  b = constrain(b, -1.0f, 1.0f);
+  if (direct) {
+    // direct mode: a = left wheel, b = right wheel
+    setMotor(L_IN1, L_IN2, (int)(a * MOTOR_MAX));
+    setMotor(R_IN1, R_IN2, (int)(b * MOTOR_MAX));
+  } else {
+    // mixed mode: a = x (linear), b = w (angular)
+    drive(a, b);
   }
 }
 
@@ -103,7 +112,7 @@ void setup() {
   pinMode(US_TRIG, OUTPUT);
   pinMode(US_ECHO, INPUT);
 
-  Serial.println("US_cm,IR,EL,ER");  // column labels for Serial Plotter
+  Serial.println("EL,ER,IR,US_cm");  // column labels for Serial Plotter
 }
 
 // ---- Loop ----
@@ -124,9 +133,9 @@ void loop() {
     long er = encR;
     interrupts();
 
-    Serial.print(us, 1); Serial.print(',');
-    Serial.print(ir);    Serial.print(',');
     Serial.print(el);    Serial.print(',');
-    Serial.println(er);
+    Serial.print(er);    Serial.print(',');
+    Serial.print(ir);    Serial.print(',');
+    Serial.println(us, 1);
   }
 }
