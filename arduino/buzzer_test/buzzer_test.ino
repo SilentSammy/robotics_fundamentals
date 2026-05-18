@@ -1,6 +1,6 @@
 // Buzzer Test for ESP32-C3
 
-#define BUZZER 3
+#define BUZZER 4
 
 void setup() {
   Serial.begin(115200);

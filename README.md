@@ -11,33 +11,33 @@
 ## Pinout Configuration
 
 ### Left Motor
-- GPIO7: IN1
-- GPIO8: IN2
+- GPIO20: IN1
+- GPIO21: IN2
 
 ### Right Motor
-- GPIO5: IN1
-- GPIO6: IN2
+- GPIO0: IN1
+- GPIO10: IN2
 
 ### Left Encoder
-- GPIO20: Channel A
-- GPIO21: Channel B
+- GPIO7: Channel A
+- GPIO3: Channel B
 
 ### Right Encoder
-- GPIO9: Channel A
-- GPIO10: Channel B
+- GPIO5: Channel A
+- GPIO6: Channel B
 
 ### IR Sensor
-- GPIO0: Digital input
+- GPIO9: Digital input
 
 ### Ultrasonic Sensor
 - GPIO2: TRIG
 - GPIO1: ECHO
 
 ### Buzzer
-- GPIO3: Signal (PWM capable)
+- GPIO4: Signal (PWM capable)
 
 ## Notes
-- Motor control uses 2 pins per motor (direction + PWM speed control on one pin)
-- All encoder pins support interrupt-driven counting
-- Buzzer pin supports PWM for tone generation
-- GPIO6 is used for ultrasonic ECHO but I2C can be reconfigured to GPIO20/21 if UART is not needed
+- Motor PWM: 100 Hz, 10-bit resolution (0–1023 duty range) via LEDC API
+- Low PWM frequency (~100 Hz) improves torque at the cost of audible hum
+- All encoder pins support interrupt-driven quadrature decoding
+- Buzzer uses `tone()` for frequency generation

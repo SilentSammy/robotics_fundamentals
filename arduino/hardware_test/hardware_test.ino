@@ -3,33 +3,41 @@
 
 // Pin Definitions
 // Motors
-#define MOTOR_L_IN1 7
-#define MOTOR_L_IN2 8
-#define MOTOR_R_IN1 5
-#define MOTOR_R_IN2 6
+#define MOTOR_L_IN1 20
+#define MOTOR_L_IN2 21
+#define MOTOR_R_IN1 0
+#define MOTOR_R_IN2 10
+
+// Motor PWM config
+#define MOTOR_FREQ 100   // Hz
+#define MOTOR_RES  10    // 10-bit: duty range 0-1023
+#define MOTOR_MAX  1023  // full speed
 
 // Encoders
-#define ENC_L_CHA 20
-#define ENC_L_CHB 21
-#define ENC_R_CHA 9
-#define ENC_R_CHB 10
+#define ENC_L_CHA 7
+#define ENC_L_CHB 3
+#define ENC_R_CHA 5
+#define ENC_R_CHB 6
 
 // Sensors & Actuators
-#define BUZZER 3
-#define IR_SENSOR 0
+#define BUZZER 4
+#define IR_SENSOR 9
 #define US_TRIG 2
 #define US_ECHO 1
 
-// Global encoder counters
+// Global encoder counters (signed: positive = forward, negative = backward)
 volatile long encoderL_count = 0;
 volatile long encoderR_count = 0;
 
+// Quadrature decoding: on Channel A rising edge, Channel B state gives direction
+// B = LOW  → forward  (+1)
+// B = HIGH → backward (-1)
 void IRAM_ATTR encoderL_ISR() {
-  encoderL_count++;
+  encoderL_count += digitalRead(ENC_L_CHB) ? -1 : 1;
 }
 
 void IRAM_ATTR encoderR_ISR() {
-  encoderR_count++;
+  encoderR_count += digitalRead(ENC_R_CHB) ? -1 : 1;
 }
 
 void setup() {
@@ -37,26 +45,28 @@ void setup() {
   delay(1000);
   Serial.println("\n=== Hardware Test Started ===\n");
   
-  // Configure pins
-  pinMode(MOTOR_L_IN1, OUTPUT);
-  pinMode(MOTOR_L_IN2, OUTPUT);
-  pinMode(MOTOR_R_IN1, OUTPUT);
-  pinMode(MOTOR_R_IN2, OUTPUT);
-  
+  // Configure motors via LEDC
+  ledcAttach(MOTOR_L_IN1, MOTOR_FREQ, MOTOR_RES);
+  ledcAttach(MOTOR_L_IN2, MOTOR_FREQ, MOTOR_RES);
+  ledcAttach(MOTOR_R_IN1, MOTOR_FREQ, MOTOR_RES);
+  ledcAttach(MOTOR_R_IN2, MOTOR_FREQ, MOTOR_RES);
+  ledcWrite(MOTOR_L_IN1, 0); ledcWrite(MOTOR_L_IN2, 0);
+  ledcWrite(MOTOR_R_IN1, 0); ledcWrite(MOTOR_R_IN2, 0);
+
+  // Configure encoders, sensors, buzzer
   pinMode(ENC_L_CHA, INPUT_PULLUP);
   pinMode(ENC_L_CHB, INPUT_PULLUP);
   pinMode(ENC_R_CHA, INPUT_PULLUP);
   pinMode(ENC_R_CHB, INPUT_PULLUP);
-  
   pinMode(BUZZER, OUTPUT);
   pinMode(IR_SENSOR, INPUT);
   pinMode(US_TRIG, OUTPUT);
   pinMode(US_ECHO, INPUT);
-  
+
   // Attach encoder interrupts
   attachInterrupt(digitalPinToInterrupt(ENC_L_CHA), encoderL_ISR, RISING);
   attachInterrupt(digitalPinToInterrupt(ENC_R_CHA), encoderR_ISR, RISING);
-  
+
   // Test 1: Buzzer
   Serial.print("1. Buzzer Test... ");
   tone(BUZZER, 1000, 200);
@@ -65,18 +75,18 @@ void setup() {
   
   // Test 2: Left Motor
   Serial.print("2. Left Motor Test... ");
-  digitalWrite(MOTOR_L_IN1, HIGH);
-  digitalWrite(MOTOR_L_IN2, LOW);
+  ledcWrite(MOTOR_L_IN1, MOTOR_MAX);
+  ledcWrite(MOTOR_L_IN2, 0);
   delay(500);
-  digitalWrite(MOTOR_L_IN1, LOW);
+  ledcWrite(MOTOR_L_IN1, 0);
   Serial.println("OK (forward 500ms)");
   
   // Test 3: Right Motor
   Serial.print("3. Right Motor Test... ");
-  digitalWrite(MOTOR_R_IN1, HIGH);
-  digitalWrite(MOTOR_R_IN2, LOW);
+  ledcWrite(MOTOR_R_IN1, MOTOR_MAX);
+  ledcWrite(MOTOR_R_IN2, 0);
   delay(500);
-  digitalWrite(MOTOR_R_IN1, LOW);
+  ledcWrite(MOTOR_R_IN1, 0);
   Serial.println("OK (forward 500ms)");
   
   // Final beep
